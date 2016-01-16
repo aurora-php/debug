@@ -18,6 +18,7 @@
 
     "autoload":     {
         "classmap": [ "libs/Debug.php" ],
+        "files": [ "libs/functions.php" ]
         "psr-4":        {
             "Octris\\Debug\\": "libs/Debug/"
         }
