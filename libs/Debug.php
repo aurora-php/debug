@@ -63,7 +63,7 @@ class Debug
     public function setOutput($handle)
     {
         if (!is_resource($handle)) {
-            throw new \InvalidArgumentException('Handle must be of type "resource"').
+            throw new \InvalidArgumentException('Handle must be of type "resource".');
         }
 
         $this->output = $handle;
