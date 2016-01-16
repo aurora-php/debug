@@ -1,8 +1,8 @@
 {
     "name":         "octris/debug",
     "type":         "library",
-    "description":  "",
-    "keywords":     [],
+    "description":  "Provides debugging tools including better replacement for var_dump.",
+    "keywords":     [ "debugging" ],
     "homepage":     "https://github.com/octris/debug",
     "license":      "BSD-3-Clause",
 
