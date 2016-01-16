@@ -77,6 +77,16 @@ class Debug
     }
 
     /**
+     * Checks whether output is probably on a web site.
+     *
+     * @return  bool                            Returns true if check succeeded.
+     */
+    protected function isHtml()
+    {
+        return (php_sapi_name() != 'cli' && stream_get_meta_data($this->output)['uri'] == 'php://output');
+    }
+
+    /**
      * Format output.
      *
      * @param   string      $str                String to output.
@@ -108,20 +118,14 @@ class Debug
     {
         static $last_key = '';
 
-        if (php_sapi_name() != 'cli') {
-            $prepare = function ($str, $indent = true) {
-                return '<pre>' . $this->format($str, $indent) . '</pre>';
-            };
-        } else {
-            $prepare = function ($str, $indent = true) {
-                return $this->format($str, $indent);
-            };
+        if (($is_html = $this->isHtml())) {
+            fputs($this->output, '<pre>');
         }
 
         $key = $file . ':' . $line;
 
         if ($last_key != $key) {
-            fputs($this->output, $prepare(sprintf("\n** DEBUG: %s(%d)**\n", $file, $line), false));
+            fputs($this->output, $this->format(sprintf("\n** DEBUG: %s(%d)**\n", $file, $line), false));
             $last_key = $key;
         }
 
@@ -131,10 +135,14 @@ class Debug
             }
         } else {
             for ($i = 0, $cnt = count($data); $i < $cnt; ++$i) {
-                ob_start($prepare);
+                ob_start(array($this, 'format'));
                 var_dump($data[$i]);
                 ob_end_flush();
             }
+        }
+
+        if ($is_html) {
+            fputs($this->output, '</pre>');
         }
     }
 
@@ -151,25 +159,73 @@ class Debug
     {
         static $last_key = '';
 
-        if (php_sapi_name() != 'cli') {
-            $prepare = function ($str, $indent = true) {
-                return '<pre>' . $this->format($str, $indent) . '</pre>';
-            };
-        } else {
-            $prepare = function ($str, $indent = true) {
-                return $this->format($str, $indent);
-            };
+        if (($is_html = $this->isHtml())) {
+            fputs($this->output, '<pre>');
         }
 
         $key = $file . ':' . $line;
 
         if ($last_key != $key) {
-            fputs($this->output, $prepare(sprintf("\n** DEBUG: %s(%d)**\n", $file, $line), false));
+            fputs($this->output, $this->format(sprintf("\n** DEBUG: %s(%d)**\n", $file, $line), false));
             $last_key = $key;
         }
 
-        ob_start($prepare);
+        ob_start(array($this, 'format'));
         vprintf($msg, $data);
         ob_end_flush();
+
+        if ($is_html) {
+            fputs($this->output, '</pre>');
+        }
+    }
+
+    /**
+     * Output error message with stack trace.
+     *
+     * @param   string              $context                Context the error occured in.
+     * @param   int                 $context_line           Line of the context.
+     * @param   array               $info                   Key/Value pairs of information to print.
+     * @param   string|null         $trace                  Optional stack trace.
+     * @param   \Exception|null     $exception              Optional exception to throw after output.
+     */
+    public function error($context, $context_line, array $info, $trace = null, \Exception $exception = null)
+    {
+        // start formatting
+        if (($is_html = $this->isHtml())) {
+            // Yes, this is an injection but it's OK here, because we want to try to force visible error output
+            // even when in a context the output would normally not visible in. {{
+            fputs($this->output, '--></script>">\'>');
+            // }}
+
+            fputs($this->output, '<pre>');
+        }
+
+        // general information
+        fputs($this->output, $this->format(sprintf("\n** ERROR: %s(%d)**\n", $context, $context_line), false));
+
+        $max = array_reduce(array_keys($info), function($carry, $key) {
+            return max($carry, strlen($key) + 3);
+        }, 0);
+
+        foreach ($info as $key => $value) {
+            fputs($this->output, $this->format(sprintf('%-' . $max . "s %s\n", $key . ':  ', $value)));
+        }
+
+        // output stacktrace
+        if (is_null($trace)) {
+            ob_start();
+            debug_print_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
+            $trace = ob_get_contents();
+            ob_end_clean();
+        }
+
+        fputs($this->output, "\n" . $this->format($trace) . "\n");
+
+        if (!is_null($exception)) {
+            // exception
+            throw $exception;
+        } elseif ($is_html) {
+            fputs($this->output, '</pre>');
+        }
     }
 }
