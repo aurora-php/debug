@@ -34,6 +34,13 @@ class Debug
     protected $output;
 
     /**
+     * Number of spaces to indent.
+     *
+     * @type    int
+     */
+    protected $indent = 3;
+
+    /**
      * Constructor.
      */
     protected function __construct()
@@ -73,14 +80,17 @@ class Debug
      * Format output.
      *
      * @param   string      $str                String to output.
+     * @param   bool        $indent             Whether to indent output.
      * @return  string                          Formatted output.
      */
-    protected function format($str)
+    protected function format($str, $indent = true)
     {
-        return '   ' . trim(
+        $spaces = str_repeat(' ', ((int)$indent) * $this->indent);
+
+        return $spaces . trim(
             str_replace(
                 "\n",
-                "\n   ",
+                "\n" . $spaces,
                 (php_sapi_name() != 'cli' ? htmlspecialchars($str) : $str)
             )
         ) . "\n";
@@ -99,19 +109,19 @@ class Debug
         static $last_key = '';
 
         if (php_sapi_name() != 'cli') {
-            $prepare = function ($str) {
-                return '<pre>' . $this->format($str) . '</pre>';
+            $prepare = function ($str, $indent = true) {
+                return '<pre>' . $this->format($str, $indent) . '</pre>';
             };
         } else {
-            $prepare = function ($str) {
-                return $this->format($str);
+            $prepare = function ($str, $indent = true) {
+                return $this->format($str, $indent);
             };
         }
 
         $key = $file . ':' . $line;
 
         if ($last_key != $key) {
-            fputs($this->output, sprintf("\n** DEBUG: %s(%d)**\n", $file, $line));
+            fputs($this->output, $prepare(sprintf("\n** DEBUG: %s(%d)**\n", $file, $line), false));
             $last_key = $key;
         }
 
@@ -142,19 +152,19 @@ class Debug
         static $last_key = '';
 
         if (php_sapi_name() != 'cli') {
-            $prepare = function ($str) {
-                return '<pre>' . $this->format($str) . '</pre>';
+            $prepare = function ($str, $indent = true) {
+                return '<pre>' . $this->format($str, $indent) . '</pre>';
             };
         } else {
-            $prepare = function ($str) {
-                return $this->format($str);
+            $prepare = function ($str, $indent = true) {
+                return $this->format($str, $indent);
             };
         }
 
         $key = $file . ':' . $line;
 
         if ($last_key != $key) {
-            fputs($this->output, sprintf("\n** DEBUG: %s(%d)**\n", $file, $line));
+            fputs($this->output, $prepare(sprintf("\n** DEBUG: %s(%d)**\n", $file, $line), false));
             $last_key = $key;
         }
 
